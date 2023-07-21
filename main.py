@@ -23,7 +23,7 @@ from ccxtbt import CCXTStore, CCXTFeed
 import time
 
 from data_feed import BinanceFuturesData
-from GMT_30_strategy_02 import HeikinAshiStrategy
+from GMT30_strat02_btest import HeikinAshiStrategy
 from optimizer_01 import main
 
 import warnings
@@ -41,10 +41,6 @@ timeframe =  'Minutes' # 'Hours' #
 compression = 5
 use_optimization = False
 
-# Notifier
-tg_chat_id = api_config.TG_BOT_ID
-tg_bot_api = api_config.TG_BOT_API
-notifier = TGnotify.TG_Notifier(tg_bot_api, tg_chat_id)
 
 def convert_to_binance_timeframe(compression, timeframe):
 
@@ -218,13 +214,10 @@ if __name__ == '__main__':
     )   
 
     # Run the strategy and get the instance
-    strat = cerebro.run(quicknotify=True, tradehistory=True, runonce=False)[0] 
-
-    # Closing the notifier connections
-    asyncio.run(notifier.close())    
+    strat = cerebro.run(quicknotify=True, tradehistory=True, runonce=False)[0]       
     
     # Plot
-    cerebro.plot(style='candlestick', start=start_date, end=end_date)  # 
+    # cerebro.plot(style='candlestick', start=start_date, end=end_date)  # 
     
     # Results
     final_value = cerebro.broker.getvalue()

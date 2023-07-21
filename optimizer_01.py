@@ -1,4 +1,4 @@
-# GMT_bot_01.optimizer_01.py
+# optimizer_01.py
 
 import datetime
 import multiprocessing
@@ -7,7 +7,7 @@ from deap import base, creator, tools, algorithms
 import random
 import numpy as np
 from data_feed import BinanceFuturesData
-from GMT_30_strategy_01 import HeikinAshiStrategy
+from GMT30_strat02_btest import HeikinAshiStrategy
 import backtrader as bt
 import pickle
 
@@ -96,7 +96,6 @@ def run_backtest(fast_ema, slow_ema, hma_length, atr_period, atr_threshold, dmi_
 
     return final_value, results  # return both final_value and results
 
-
 # Set the ranges for the parameters to optimize
 fast_ema_range = range(2, 15)
 slow_ema_range = range(5, 30)
@@ -141,7 +140,6 @@ def evaluate(params, fetched_data, start_date, end_date, bt_timeframe, compressi
         total_trades = trade_analysis.total.total
         if  'won' in trade_analysis and 'total' in trade_analysis['won']:        
             won_total = trade_analysis.won.total
-
         else:        
             won_total = 0
     else:
@@ -154,11 +152,14 @@ def evaluate(params, fetched_data, start_date, end_date, bt_timeframe, compressi
         average_pnl = 0  # or some other default value 
 
     print(final_value, drawdown, sqn, average_pnl, won_total, net_profit)
-    return final_value, drawdown, sqn, average_pnl, won_total, net_profit  # return profit, drawdown, sqn, won_total, net_profit
+    # return final_value, drawdown, sqn, average_pnl, won_total, net_profit  # return profit, drawdown, sqn, won_total, net_profit
+    return final_value, drawdown, sqn, net_profit  # return profit, drawdown, sqn, won_total, net_profit
 
 # Genetic Algorithm
-creator.create("FitnessMax", base.Fitness, weights=(1.0, -0.6, 0.8, 0.7, 0.5, 0.8)) # 6 objectives: maximize profit, minimize drawdown, maximize sqn, 
-                                                                                    # maximize average_pnl, maximize won_total, maximize net_profit
+# creator.create("FitnessMax", base.Fitness, weights=(1.0, -0.6, 0.8, 0.7, 0.5, 0.8)) # 6 objectives: maximize profit, minimize drawdown, maximize sqn, 
+#                                                                                     # maximize average_pnl, maximize won_total, maximize net_profit
+creator.create("FitnessMax", base.Fitness, weights=(1.0, -0.6, 0.8, 0.9)) # 4 objectives: maximize profit, minimize drawdown, maximize sqn, 
+                                                                                    # maximize net_profit
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
@@ -237,15 +238,15 @@ def main(symbol, start_date, end_date, bt_timeframe, compression, fetched_data):
     # Use a multiprocessing Pool for the map function
     pool = Pool()
     toolbox.register("map", pool.map)
-    pop = toolbox.population(n=50)
-    hof = tools.HallOfFame(30)
+    pop = toolbox.population(n=60)
+    hof = tools.HallOfFame(40)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
     stats.register("min", np.min)
     stats.register("max", np.max)
 
     try:
-        pop, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.55, mutpb=0.25, ngen=30, 
+        pop, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.55, mutpb=0.25, ngen=40, 
                                             stats=stats, halloffame=hof, verbose=True)
         
         # Save best individuals and their fitness to a file

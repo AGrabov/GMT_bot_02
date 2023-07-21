@@ -1,4 +1,5 @@
 # main.py
+
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -16,11 +17,13 @@ from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
 import os
 import json
-import TGnotify
+from TGnotify import TG_Notifier
 import asyncio
 import api_config
 from ccxtbt import CCXTStore, CCXTFeed
 import time
+import argparse
+from datetime import datetime
 
 from data_feed import BinanceFuturesData
 from GMT30_strat02_btest import HeikinAshiStrategy
@@ -41,6 +44,21 @@ timeframe =  'Minutes' # 'Hours' #
 compression = 5
 use_optimization = False
 
+
+
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='Run backtest and get the "best_params".')
+parser.add_argument('--use_optimization', type=bool, default=False, help='Whether to use optimization')
+parser.add_argument('--start_date', type=lambda s: datetime.strptime(s, '%Y-%m-%d'), default=None, help='The start date for backtesting (format: YYYY-MM-DD)')
+parser.add_argument('--end_date', type=lambda s: datetime.strptime(s, '%Y-%m-%d'), default=None, help='The end date for backtesting (format: YYYY-MM-DD)')
+args = parser.parse_args()
+
+# Use the arguments in your script
+use_optimization = args.use_optimization
+start_date = args.start_date
+end_date = args.end_date
+
+notifier = TG_Notifier(token=api_config.TG_BOT_API, chat_id=api_config.TG_BOT_ID)
 
 def convert_to_binance_timeframe(compression, timeframe):
 
@@ -288,6 +306,11 @@ if __name__ == '__main__':
     print("Best parameters found by GA:", best_params)
     print()   
 
+    # After running the backtest and getting the best parameters
+    with open(f'best_params_{start_date}-{end_date}.json', 'w') as f:
+        json.dump(best_params, f)
+
+
     # Print out the statistics
     print("$" * 77)
     print(f"Liquid value of the portfolio: {final_value:.2f} $")  # Liquid value of the portfolio    
@@ -311,6 +334,35 @@ if __name__ == '__main__':
     print(f"\t PnL(total): {short_total_pnl:.2f}, PnL(avg): {short_avg_pnl:.2f}")   
     print()   
     print("$" * 77)
+
+    # Send a TELEGRAM notification
+    asyncio.run(notifier.send_message(f"Optimization finished at {datetime.now()}\n"
+                                      f"Start date: {start_date}\n"
+                                      f"End date: {end_date}\n"
+                                      f"Best parameters: {best_params}\n"
+                                      f"------------------------------\n"
+                                      f"Backtesting results:\n"
+                                      f"Final value of the portfolio: {final_value:.2f} $\n"
+                                      f"Net profit: {net_profit:.2f}\n"
+                                      f"SQN: {sqn:.2f}\n"
+                                      f"Max drawdown: {max_drawdown:.2f}\n"
+                                      f"------------------------------\n"
+                                      f"Total:\n"
+                                      f"Won/Lost trades: {won_count} / {lost_count} ({total_trades})\n"
+                                      f"PnL(total): {total_pnl:.2f}, PnL(avg): {average_pnl:.2f}\n"
+                                      f"Profitable trades %: {won_trades_perc:.2f}\n"
+                                      f"------------------------------\n"
+                                      f"LONG:\n"
+                                      f"Won/Lost: {long_won_trades} / {long_lost_trades} ({long_total_trades})\n"
+                                      f"PnL(total): {long_total_pnl:.2f}, PnL(avg): {long_avg_pnl:.2f}\n"
+                                      f"------------------------------\n"
+                                      f"SHORT:\n"
+                                      f"Won/Lost: {short_won_trades} / {short_lost_trades} ({short_total_trades})\n"
+                                      f"PnL(total): {short_total_pnl:.2f}, PnL(avg): {short_avg_pnl:.2f}\n"
+                                      ))
+
+    # Closing the notifier connections
+    asyncio.run(notifier.close())
 
     # Save the results in a json file
 

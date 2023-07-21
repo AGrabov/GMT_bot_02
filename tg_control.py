@@ -88,16 +88,20 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def run_optimizer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /run_optimizer is issued."""
+    if context.args:
+        days = int(context.args[0])
+    else:
+        days = 30  # default value
     update.message.reply_text('Optimizer started')
     # Start a new thread to run the optimizer
-    threading.Thread(target=run_optimizer_in_background, args=(update, context)).start()
+    threading.Thread(target=run_optimizer_in_background, args=(update, context, days)).start()
 
-def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a message when the command /run_optimizer is issued."""
+def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TYPE, days: int):
+    """Run the optimizer in a separate thread."""
     global best_params  # Declare best_params as global
     # Implement the functionality to start the optimizer here
     end_date = datetime.date.today()
-    start_date = end_date - datetime.timedelta(days=30)  # change to 15 for 15 days
+    start_date = end_date - datetime.timedelta(days=days)
 
     # Run your main.py script with use_optimization flag and dates
     command = f".venv\Scripts\python.exe main.py --use_optimization --start_date {start_date} --end_date {end_date}"
@@ -128,6 +132,15 @@ def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         query.edit_message_text(text="Live trading will continue with the previous parameters")
 
+async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a message when the command /results is issued."""
+    try:
+        with open('results.json', 'r') as f:
+            results = json.load(f)
+        await update.message.reply_text(f"Current results: {results}")
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        await update.message.reply_text(f"Error loading results: {e}")
+
 
 def main() -> None:
     """Start the bot."""
@@ -138,6 +151,7 @@ def main() -> None:
     application.add_handler(CommandHandler("stop_live", stop_live))
     application.add_handler(CommandHandler("status", status))
     application.add_handler(CommandHandler("run_optimizer", run_optimizer))
+    application.add_handler(CommandHandler("results", results))
     application.add_handler(CallbackQueryHandler(button))
 
     # Run the bot until the user presses Ctrl-C

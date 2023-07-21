@@ -1,12 +1,14 @@
 # live_trading.py
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+
 from email import message
+from pickletools import optimize
+from turtle import Terminator
 import backtrader as bt
-from ccxtbt import CCXTStore, CCXTFeed
+from ccxtbt import CCXTStore
 import pytz
 from GMT_30_strategy_02 import HeikinAshiStrategy
-
 import TGnotify
 import pandas as pd
 import api_config
@@ -17,9 +19,8 @@ import datetime as dt
 import asyncio
 from tabulate import tabulate
 from trade_list_analyzer import trade_list
-import csv
-from backtrader.feeds import GenericCSVData
-from data_feed import BinanceFuturesData
+import argparse
+
 
 # Settings
 target_coin = 'GMT'
@@ -27,17 +28,91 @@ base_currency = 'USDT'
 symbol = target_coin + base_currency
 timeframe = bt.TimeFrame.Minutes
 compression = 5  # For live trading, you typically want to use smaller timeframes
+optimized = False
 
 # Notifier
 tg_chat_id = api_config.TG_BOT_ID
 tg_bot_api = api_config.TG_BOT_API
 notifier = TGnotify.TG_Notifier(tg_bot_api, tg_chat_id)
 
+if optimized:
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Run live trading with best parameters.')
+    parser.add_argument('--params', type=str, help='The best parameters for the strategy')
+    args = parser.parse_args()
+
+    # Convert the best_params string to a list of integers
+    best_params = list(map(int, args.params.split(',')))
+
+else:
+    # Use the default parameters from the strategy
+        best_params = (
+            HeikinAshiStrategy.params.fast_ema,
+            HeikinAshiStrategy.params.slow_ema,
+            HeikinAshiStrategy.params.hma_length,
+            HeikinAshiStrategy.params.atr_period,
+            HeikinAshiStrategy.params.atr_threshold,
+            HeikinAshiStrategy.params.dmi_length,            
+            HeikinAshiStrategy.params.dmi_threshold,
+            HeikinAshiStrategy.params.cmo_period,
+            HeikinAshiStrategy.params.cmo_threshold,
+            HeikinAshiStrategy.params.volume_factor_perc,
+            HeikinAshiStrategy.params.ta_threshold,
+            HeikinAshiStrategy.params.mfi_period,
+            HeikinAshiStrategy.params.mfi_level,
+            HeikinAshiStrategy.params.mfi_smooth,
+            HeikinAshiStrategy.params.sl_percent,
+            HeikinAshiStrategy.params.kama_period,
+            HeikinAshiStrategy.params.dma_period,
+            HeikinAshiStrategy.params.dma_gainlimit,
+            HeikinAshiStrategy.params.dma_hperiod,
+            HeikinAshiStrategy.params.fast_ad,
+            HeikinAshiStrategy.params.slow_ad,
+            HeikinAshiStrategy.params.fastk_period,
+            HeikinAshiStrategy.params.fastd_period,
+            HeikinAshiStrategy.params.fastd_matype,
+            HeikinAshiStrategy.params.mama_fastlimit,
+            HeikinAshiStrategy.params.mama_slowlimit,
+            HeikinAshiStrategy.params.apo_fast,
+            HeikinAshiStrategy.params.apo_slow,
+            HeikinAshiStrategy.params.apo_matype,
+        )  # Retrieve default values from the strategy class
+
 # Create a new backtrader instance
 cerebro = bt.Cerebro(quicknotify=True, runonce=False)
 
 # Add your strategy
-cerebro.addstrategy(HeikinAshiStrategy,)
+cerebro.addstrategy(HeikinAshiStrategy,
+        fast_ema=best_params[0],
+        slow_ema=best_params[1],
+        hma_length=best_params[2],
+        atr_period=best_params[3],
+        atr_threshold=best_params[4],
+        dmi_length=best_params[5],        
+        dmi_threshold=best_params[6],
+        cmo_period=best_params[7],
+        cmo_threshold=best_params[8],
+        volume_factor_perc=best_params[9],
+        ta_threshold=best_params[10],
+        mfi_period=best_params[11],
+        mfi_level=best_params[12],
+        mfi_smooth=best_params[13],
+        sl_percent=best_params[14],
+        kama_period=best_params[15],
+        dma_period=best_params[16],
+        dma_gainlimit=best_params[17],
+        dma_hperiod=best_params[18],
+        fast_ad=best_params[19],
+        slow_ad=best_params[20],
+        fastk_period=best_params[21],
+        fastd_period=best_params[22],
+        fastd_matype=best_params[23],
+        mama_fastlimit=best_params[24],
+        mama_slowlimit=best_params[25],
+        apo_fast=best_params[26],
+        apo_slow=best_params[27],
+        apo_matype=best_params[28],    
+       )   
 
 # Add the analyzers we are interested in
 cerebro.addobserver(bt.observers.DrawDown, plot=False)
@@ -64,39 +139,9 @@ config = {'apiKey': params["binance"]["apikey"],
 store = CCXTStore(exchange='binanceusdm', currency=base_currency, config=config, retries=5) #, debug=True) #, sandbox=True)
 # store.exchange.setSandboxMode(True)
 
-broker_mapping = {
-    'order_types': {
-        bt.Order.Market: 'market',
-        bt.Order.Limit: 'limit',
-        bt.Order.Stop: 'stop-loss', #stop-loss for kraken, stop for bitmex
-        bt.Order.StopLimit: 'stop limit'
-    },
-    'mappings':{
-        'closed_order':{
-            'key': 'status',
-            'value':'closed'
-        },
-        'canceled_order':{
-            'key': 'status',
-            'value':'canceled'
-        }
-    }
-}
-
 broker = store.getbroker()
 cerebro.setbroker(broker)
 cerebro.broker.setcommission(leverage=10.0) 
-
-# # Set the starting cash and commission
-# starting_cash = 100
-# cerebro.broker.setcash(starting_cash)
-# cerebro.broker.setcommission(
-#     automargin=True,         
-#     leverage=10.0, 
-#     commission=0.0004, 
-#     commtype=bt.CommInfoBase.COMM_PERC,
-#     stocklike=True,
-# )  
 
 server_time = store.exchange.fetch_time()
 local_time = time.time() * 1000  # convert to milliseconds
@@ -108,10 +153,9 @@ asyncio.run(notifier.send_message(
     f"Time difference between local machine and Binance server: {time_difference} ms\n"))
 
 
-t = time.time()
-
 # create a timezone object for your timezone
 kiev_tz = pytz.timezone('Europe/Kiev')
+t = time.time()
 loc_time = dt.datetime.fromtimestamp(t).astimezone(tz=kiev_tz)
 hist_start_date = loc_time - dt.timedelta(hours=24)
 dataname = (f'{target_coin}/{base_currency}')
@@ -136,18 +180,23 @@ try:
     sqn = strat.analyzers.sqn.get_analysis()
     returns = strat.analyzers.returns.get_analysis()
     drawdown = strat.analyzers.drawdown.get_analysis()
-    trade_list = strat.analyzers.trade_list.get_analysis()
+    tradelist = strat.analyzers.trade_list.get_analysis()
 
     stats0 = pd.DataFrame(tradeanalyzer, index=[0])
     stats1 = pd.DataFrame(sqn, index=[0])
     stats2 = pd.DataFrame(returns, index=[0])
     stats3 = pd.DataFrame(drawdown, index=[0])
-    stats4 = pd.DataFrame(trade_list, index=[0])
-    all_stats = [stats0,stats1,stats2,stats3,stats4]
+    # stats4 = pd.DataFrame(tradelist, index=[0])
+    all_stats = [stats0,stats1,stats2,stats3] #,stats4]
 
     strategySummary = pd.concat(all_stats, axis=1)
+
 except KeyboardInterrupt:
     print("Interrupted by user")
+    asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
+                                      f"\n"
+                                      f"Interrupted by user"))
+    
 finally:
     # This code will be executed whether an exception occurs or not
     strategySummary.to_csv('all_stats.csv')

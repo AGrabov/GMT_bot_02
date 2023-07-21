@@ -118,16 +118,16 @@ def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TY
         update.message.reply_text('Optimizer finished, but no best parameters found')
 
 def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    global best_params  # Declare best_params as global
     query = update.callback_query
     query.answer()
     if query.data == 'yes':
         # Run your live_trading.py script with the best parameters
-        command = f".venv\Scripts\python.exe live_trading.py --params {best_params}"
+        command = f".venv\Scripts\python.exe live_trading.py --optimized True"
         bot_process = subprocess.Popen(shlex.split(command))
         query.edit_message_text(text="Live trading started with new parameters")
     else:
         query.edit_message_text(text="Live trading will continue with the previous parameters")
+
 
 def main() -> None:
     """Start the bot."""

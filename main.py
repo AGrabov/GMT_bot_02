@@ -307,7 +307,7 @@ if __name__ == '__main__':
     print()   
 
     # After running the backtest and getting the best parameters
-    with open(f'best_params_{start_date}-{end_date}.json', 'w') as f:
+    with open('best_params.json', 'w') as f:
         json.dump(best_params, f)
 
 

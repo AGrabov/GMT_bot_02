@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 
 from email import message
 from pickletools import optimize
-from turtle import Terminator
+import subprocess
 import backtrader as bt
 from ccxtbt import CCXTStore
 import pytz
@@ -39,10 +39,46 @@ notifier = TGnotify.TG_Notifier(tg_bot_api, tg_chat_id)
 parser = argparse.ArgumentParser(description='Run live trading with the optimized "best_params".')
 parser.add_argument('--optimized', type=bool, default=False, help='Whether to use optimized parameters')
 
-if optimized:    
+if optimized:
     # At the beginning of the script
-    with open('best_params.json', 'r') as f:
-        best_params = json.load(f)
+    try:
+        with open('best_params.json', 'r') as f:
+            best_params = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error loading best parameters: {e}")
+        asyncio.run(notifier.send_message(f"Error loading best parameters: {e}"))
+        # Use the default parameters from the strategy
+        best_params = (
+            HeikinAshiStrategy.params.fast_ema,
+            HeikinAshiStrategy.params.slow_ema,
+            HeikinAshiStrategy.params.hma_length,
+            HeikinAshiStrategy.params.atr_period,
+            HeikinAshiStrategy.params.atr_threshold,
+            HeikinAshiStrategy.params.dmi_length,            
+            HeikinAshiStrategy.params.dmi_threshold,
+            HeikinAshiStrategy.params.cmo_period,
+            HeikinAshiStrategy.params.cmo_threshold,
+            HeikinAshiStrategy.params.volume_factor_perc,
+            HeikinAshiStrategy.params.ta_threshold,
+            HeikinAshiStrategy.params.mfi_period,
+            HeikinAshiStrategy.params.mfi_level,
+            HeikinAshiStrategy.params.mfi_smooth,
+            HeikinAshiStrategy.params.sl_percent,
+            HeikinAshiStrategy.params.kama_period,
+            HeikinAshiStrategy.params.dma_period,
+            HeikinAshiStrategy.params.dma_gainlimit,
+            HeikinAshiStrategy.params.dma_hperiod,
+            HeikinAshiStrategy.params.fast_ad,
+            HeikinAshiStrategy.params.slow_ad,
+            HeikinAshiStrategy.params.fastk_period,
+            HeikinAshiStrategy.params.fastd_period,
+            HeikinAshiStrategy.params.fastd_matype,
+            HeikinAshiStrategy.params.mama_fastlimit,
+            HeikinAshiStrategy.params.mama_slowlimit,
+            HeikinAshiStrategy.params.apo_fast,
+            HeikinAshiStrategy.params.apo_slow,
+            HeikinAshiStrategy.params.apo_matype,
+        )  # Retrieve default values from the strategy class
 
 else:
     # Use the default parameters from the strategy
@@ -112,7 +148,10 @@ cerebro.addstrategy(HeikinAshiStrategy,
         apo_fast=best_params[26],
         apo_slow=best_params[27],
         apo_matype=best_params[28],
-        )   
+        
+        
+
+    )   
 
 # Add the analyzers we are interested in
 cerebro.addobserver(bt.observers.DrawDown, plot=False)
@@ -142,7 +181,18 @@ store = CCXTStore(exchange='binanceusdm', currency=base_currency, config=config,
 broker = store.getbroker()
 cerebro.setbroker(broker)
 cerebro.broker.setcommission(leverage=10.0) 
- 
+
+# # Set the starting cash and commission
+# starting_cash = 100
+# cerebro.broker.setcash(starting_cash)
+# cerebro.broker.setcommission(
+#     automargin=True,         
+#     leverage=10.0, 
+#     commission=0.0004, 
+#     commtype=bt.CommInfoBase.COMM_PERC,
+#     stocklike=True,
+# )  
+
 server_time = store.exchange.fetch_time()
 local_time = time.time() * 1000  # convert to milliseconds
 time_difference = round(server_time - local_time)
@@ -196,6 +246,12 @@ except KeyboardInterrupt:
     asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
                                       f"\n"
                                       f"Interrupted by user"))
+    
+except subprocess.TimeoutExpired:
+    print("Strategy execution timed out")
+    asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
+                                      f"\n"
+                                      f"Strategy execution timed out"))
     
 finally:
     # This code will be executed whether an exception occurs or not

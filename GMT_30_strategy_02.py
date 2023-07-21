@@ -31,7 +31,7 @@ class HeikinAshiStrategy(bt.Strategy):
         'mfi_period': 10,
         'mfi_level': 21,
         'mfi_smooth': 15,
-        'sl_percent': 9,  
+        'sl_percent': 5,  
         'kama_period': 42, 
         'dma_period': 34, 
         'dma_gainlimit': 35,
@@ -265,37 +265,17 @@ class HeikinAshiStrategy(bt.Strategy):
         # self.p, self.r1, self.r2, self.s1, self.s2 = self.pivot.lines
 
         self.order = None        
-        self.entry_price = None        
+        self.entry_price = None  
+        
+    def start(self):
+        self.daily_value = self.broker.getvalue()  # Store the initial portfolio value
+        self.start_value = self.broker.getvalue()  # Store the initial portfolio value
     
     def adx_growing(self):
         return (self.adx.real[-1] < self.adx.real[0]) and \
                 (self.adx.real[-2] <= self.adx.real[-1]) #and \
                 # (self.adx.real[-3] >= self.adx.real[-2])
-
-    # def pattern_buy(self):
-    #     condition1 = self.pattern_buy1[0]
-    #     condition2 = self.ta_patterns.signal_buy()        
-    #     pattern_buy = (condition1) # or condition2)
-    #     return pattern_buy
-
-    # def pattern_sell(self):
-    #     condition1 = self.pattern_sell1[0]
-    #     condition2 = self.ta_patterns.signal_sell()        
-    #     pattern_sell = (condition1) # or condition2)
-    #     return pattern_sell
-    
-    # def pattern_stop_buy(self):
-    #     condition1 = self.pattern_stopBuy1[0]
-    #     condition2 = self.ta_patterns.signal_stop_buy()        
-    #     pattern_stop_buy = (condition1) # or condition2)
-    #     return pattern_stop_buy
-
-    # def pattern_stop_sell(self):
-    #     condition1 = self.pattern_stopSell1[0]
-    #     condition2 = self.ta_patterns.signal_stop_sell()              
-    #     pattern_stop_sell = (condition1) # or condition2)
-    #     return pattern_stop_sell
-    
+        
     def check_buy_condition(self):        
         condition1 = (self.mas_buy[0] or self.pivot.buy() or self.mama_buy[0] or self.sma_buy[0]) and self.apo_buy[0] #or self.pattern_buy())
         condition2 = (self.cmo_buy[0] or self.adx_buy[0]) and self.mfi_buy[0] and self.dma_osc_buy[0]
@@ -341,7 +321,10 @@ class HeikinAshiStrategy(bt.Strategy):
                 self.long_entry_price = order.executed.price
                 self.log(f"BUY EXECUTED, Price: {order.executed.price:.4f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}")
                 if self.tg_notifications:
-                    asyncio.run(self.notifier.send_message(f"BUY EXECUTED, Price: {order.executed.price:.4f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}"))
+                    asyncio.run(self.notifier.send_message(f"BUY EXECUTED\n"
+                                                           f"Price: {order.executed.price:.4f}\n"
+                                                           f" Cost: {order.executed.value:.2f}\n"
+                                                           f" Comm {order.executed.comm:.2f}"))
 
             else:                
                 self.current_position_size -= order.executed.size
@@ -349,7 +332,10 @@ class HeikinAshiStrategy(bt.Strategy):
                 self.short_entry_price = order.executed.price
                 self.log(f"SELL EXECUTED, Price: {order.executed.price:.4f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}")
                 if self.tg_notifications:
-                    asyncio.run(self.notifier.send_message(f"SELL EXECUTED, Price: {order.executed.price:.4f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}"))
+                    asyncio.run(self.notifier.send_message(f"SELL EXECUTED\n"
+                                                           f" Price: {order.executed.price:.4f}\n"
+                                                           f" Cost: {order.executed.value:.2f}\n"
+                                                           f" Comm {order.executed.comm:.2f}"))
 
 
             if not self.position:  # if position is closed
@@ -398,11 +384,7 @@ class HeikinAshiStrategy(bt.Strategy):
         self.daily_trades += 1
         self.total_trades += 1
         
-        self.past_trades.append(trade.pnlcomm)
-
-    def start(self):
-        self.daily_value = self.broker.getvalue()  # Store the initial portfolio value
-        self.start_value = self.broker.getvalue()  # Store the initial portfolio value
+        self.past_trades.append(trade.pnlcomm)    
 
     async def send_daily_summary(self):
         # Calculate daily PnL
@@ -432,8 +414,6 @@ class HeikinAshiStrategy(bt.Strategy):
         await self.notifier.send_message(summary)
     
     def next(self): 
-        
-
         if len(self.data0) < 5:
             return  
         
@@ -453,7 +433,7 @@ class HeikinAshiStrategy(bt.Strategy):
         c = self.ha.lines.ha_close[0]
         v = self.data1.volume[0]
         self.datafile.write(f'{dt_aware},{o},{h},{l},{c},{v}\n')
-        self.datafile.flush()  # Add this line
+        self.datafile.flush()  # Write the data immediately to the.csv file
 
         # Check if the data point is behind more than 10 minutes               
         current_time = bt.num2date(self.data0.datetime[0]).replace(tzinfo=pytz.utc) # .astimezone(tz=kiev_tz) # get the timestamp of the current data0 point
@@ -484,7 +464,7 @@ class HeikinAshiStrategy(bt.Strategy):
         else: 
             self.pos = 'None'
                 
-        self.log(f'O: {self.data0.open[0]:.4f}, H: {self.data0.high[0]:.4f}, L: {self.data0.low[0]:.4f}, C: {self.data0.close[0]:.4f}, Volume: {self.data0.volume[0]:.0f}\t {status}')
+        self.log(f'O: {self.data0.open[0]:.4f}, H: {self.data0.high[0]:.4f}, L: {self.data0.low[0]:.4f}, C: {self.data0.close[0]:.4f}, Volume: {self.data0.volume[0]:.0f}    {status}')
         self.log(f'  \t Portfolio value:  {value:.2f} $,  Position:  {self.pos}')
         self.log('**************************'*2)
         
@@ -524,7 +504,7 @@ class HeikinAshiStrategy(bt.Strategy):
                     
             if self.check_buy_condition():
                 price = self.data0.high[0]  
-                cash = self.broker.getvalue() 
+                # cash = self.broker.getvalue() 
                 if self.params.use_kelly:
                     trade_amount1 = self.params.trade_coef / 2
                     free_money = cash * (trade_amount1 + (trade_amount1 * kelly_coef))
@@ -538,26 +518,30 @@ class HeikinAshiStrategy(bt.Strategy):
                 print("-" * 50)                
                 print(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\t ---- LONG ---- size = {size:.2f} at price = {price:.4f} //// ----- value: {value:.2f} $")
                 if self.tg_notifications:
-                    asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\t ---- LONG ---- size = {size:.2f} at price = {price:.4f} //// ----- value: {value:.2f} $")) 
+                    asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\n"
+                                                           f" ---- LONG ---- size = {size:.2f} at price = {price:.4f}\n"
+                                                           f" Portfolio value: {value:.2f} $")) 
                 if self.params.use_kelly:               
                     print(f"win rate: {win_rate:.2f}, win loss ratio: {win_loss_ratio:.2f},\t Kelly coef: {kelly_coef:.2f}")
                 
 
             elif self.check_sell_condition():
-                price = self.data0.low[0]  
-                # cash = self.broker.getvalue()           
+                price = self.data0.low[0]
+                # cash = self.broker.getvalue()
                 if self.params.use_kelly:
                     trade_amount1 = self.params.trade_coef / 2
                     free_money = cash * (trade_amount1 + (trade_amount1 * kelly_coef))
-                else:                        
+                else:
                     free_money = cash * self.params.trade_coef
-                size = self.broker.getcommissioninfo(self.data).getsize(price=price, cash=free_money) #* (kelly_coef)          
+                size = self.broker.getcommissioninfo(self.data).getsize(price=price, cash=free_money) #* (kelly_coef)
                 self.order = self.sell(size=size, exectype=bt.Order.Market)
-                print()                                      
+                print()
                 print("-" * 50)
                 print(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\t ---- SHORT ---- size = {size:.2f} at price = {price:.4f} //// ----- Value: {value:.2f} $")
                 if self.tg_notifications: 
-                    asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\t ---- SHORT ---- size = {size:.2f} at price = {price:.4f} //// ----- Value: {value:.2f} $"))               
+                    asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\n"
+                                                           f" ---- SHORT ---- size = {size:.2f} at price = {price:.4f}\n"
+                                                           f" Portfolio value: {value:.2f} $"))               
                 if self.params.use_kelly:
                     print(f"win rate: {win_rate:.2f}, win\loss ratio: {win_loss_ratio:.2f},\t Kelly coef: {kelly_coef:.2f}")
                 
@@ -565,18 +549,22 @@ class HeikinAshiStrategy(bt.Strategy):
         elif ((self.in_position > 0) and (self.check_sell_condition() or self.check_stop_buy_condition())):            
             self.order = self.close()
             # cash = self.broker.getvalue()
-            msg = f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}  CLOSED     ---- SHORT ----  ////  \t  CASH: {cash:.2f} $"
+            msg = f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}  CLOSED     ---- LONG ----  ////  \t  CASH: {cash:.2f} $"
             print(msg)
-            if self.tg_notifications:
-                asyncio.run(self.notifier.send_message(msg))
+            if self.tg_notifications and msg.strip():
+                asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\n"
+                                                       f" CLOSED     ---- LONG ----    \n"
+                                                       f" CASH: {cash:.2f} $"))
             
         elif ((self.in_position < 0) and (self.check_buy_condition() or self.check_stop_sell_condition())):            
             self.order = self.close()  
             # cash = self.broker.getvalue()
             msg = f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}  CLOSED     ---- SHORT ----  ////  \t  CASH: {cash:.2f} $"
             print(msg)
-            if self.tg_notifications:
-                asyncio.run(self.notifier.send_message(msg))
+            if self.tg_notifications and msg.strip():
+                asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\n"
+                                                       f"  CLOSED     ---- SHORT ----    \n"
+                                                       f"  CASH: {cash:.2f} $"))
             
         
         current_price = self.data0.close[0]
@@ -585,14 +573,15 @@ class HeikinAshiStrategy(bt.Strategy):
             if ((self.in_position > 0) and  ((self.long_entry_price * (1 - sl_value)) > current_price)) or \
                 ((self.in_position < 0) and  ((self.short_entry_price * (1 + sl_value)) < current_price)):
                 self.order = self.close()
-
-                msg = self.log(f"Price: {current_price:.4f}, SL %: {self.params.sl_percent:.2f} \t !!! STOP-LOSS !!!")
+                self.log(f"Price: {current_price:.4f}, SL %: {self.params.sl_percent:.2f} \t !!! STOP-LOSS !!!")                
                 if self.tg_notifications:
-                    asyncio.run(self.notifier.send_message(msg))
+                    asyncio.run(self.notifier.send_message(f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\n"
+                                                           f"Price: {current_price:.4f}, SL %: {self.params.sl_percent:.2f} \n"
+                                                           f" !!! STOP-LOSS !!!"))
                                             
             # print("-" * 50)
             # self.log('DrawDown: %.2f' % self.stats.drawdown.drawdown[-1])
-            # self.log('MaxDrawDown: %.2f' % self.stats.drawdown.maxdrawdown[-1])   
+            # self.log('MaxDrawDown: %.2f' % self.stats.drawdown.maxdrawdown[-1])
             # 
 
         # Check if we're at the end of the trading day
@@ -613,6 +602,3 @@ class HeikinAshiStrategy(bt.Strategy):
 
     def stop(self):
         self.datafile.close()
-
-    
-    

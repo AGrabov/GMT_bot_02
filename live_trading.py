@@ -35,14 +35,11 @@ tg_chat_id = api_config.TG_BOT_ID
 tg_bot_api = api_config.TG_BOT_API
 notifier = TGnotify.TG_Notifier(tg_bot_api, tg_chat_id)
 
-if optimized:
-    # Parse command-line arguments
-    # parser = argparse.ArgumentParser(description='Run live trading with best parameters.')
-    # parser.add_argument('--params', type=str, help='The best parameters for the strategy')
-    # args = parser.parse_args()
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='Run live trading with the optimized "best_params".')
+parser.add_argument('--optimized', type=bool, default=False, help='Whether to use optimized parameters')
 
-    # Convert the best_params string to a list of integers
-    # best_params = list(map(int, args.params.split(',')))
+if optimized:    
     # At the beginning of the script
     with open('best_params.json', 'r') as f:
         best_params = json.load(f)
@@ -115,10 +112,7 @@ cerebro.addstrategy(HeikinAshiStrategy,
         apo_fast=best_params[26],
         apo_slow=best_params[27],
         apo_matype=best_params[28],
-        
-        
-
-    )   
+        )   
 
 # Add the analyzers we are interested in
 cerebro.addobserver(bt.observers.DrawDown, plot=False)
@@ -148,18 +142,7 @@ store = CCXTStore(exchange='binanceusdm', currency=base_currency, config=config,
 broker = store.getbroker()
 cerebro.setbroker(broker)
 cerebro.broker.setcommission(leverage=10.0) 
-
-# # Set the starting cash and commission
-# starting_cash = 100
-# cerebro.broker.setcash(starting_cash)
-# cerebro.broker.setcommission(
-#     automargin=True,         
-#     leverage=10.0, 
-#     commission=0.0004, 
-#     commtype=bt.CommInfoBase.COMM_PERC,
-#     stocklike=True,
-# )  
-
+ 
 server_time = store.exchange.fetch_time()
 local_time = time.time() * 1000  # convert to milliseconds
 time_difference = round(server_time - local_time)
@@ -227,6 +210,3 @@ finally:
     asyncio.run(notifier.close())
 
     cerebro.plot()
-
-
-

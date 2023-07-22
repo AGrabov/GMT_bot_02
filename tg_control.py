@@ -2,6 +2,7 @@
 
 from telegram import Update, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
+from tabulate import tabulate
 import api_config
 import threading
 import subprocess
@@ -86,17 +87,17 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text('Bot is not running')
 
-def run_optimizer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def run_optimizer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /run_optimizer is issued."""
     if context.args:
         days = int(context.args[0])
     else:
         days = 30  # default value
-    update.message.reply_text('Optimizer started')
+    await update.message.reply_text('Optimizer started')
     # Start a new thread to run the optimizer
     threading.Thread(target=run_optimizer_in_background, args=(update, context, days)).start()
 
-def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TYPE, days: int):
+async def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TYPE, days: int):
     """Run the optimizer in a separate thread."""
     global best_params  # Declare best_params as global
     # Implement the functionality to start the optimizer here
@@ -104,7 +105,7 @@ def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TY
     start_date = end_date - datetime.timedelta(days=days)
 
     # Run your main.py script with use_optimization flag and dates
-    command = f".venv\Scripts\python.exe main.py --use_optimization --start_date {start_date} --end_date {end_date}"
+    command = f".venv\\Scripts\\python.exe main.py --use_optimization --start_date {start_date} --end_date {end_date}"
     process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 
@@ -113,31 +114,36 @@ def run_optimizer_in_background(update: Update, context: ContextTypes.DEFAULT_TY
     match = re.search(r"Best parameters: (.*)", stdout.decode())
     if match:
         best_params = match.group(1)  # Now this will update the global variable
-        update.message.reply_text('Optimizer finished, best parameters found')
+        await update.message.reply_text('Optimizer finished, best parameters found')
         keyboard = [[InlineKeyboardButton("Yes", callback_data='yes'),
                      InlineKeyboardButton("No", callback_data='no')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text('Do you want to use these parameters for live trading?', reply_markup=reply_markup)
+        await update.message.reply_text('Do you want to use these parameters for live trading?', reply_markup=reply_markup)
     else:
-        update.message.reply_text('Optimizer finished, but no best parameters found')
+        await update.message.reply_text('Optimizer finished, but no best parameters found')
 
 def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     query.answer()
     if query.data == 'yes':
+        # Check if bot_process is not None before trying to terminate it
+        if bot_process is not None:
+            bot_process.terminate()
         # Run your live_trading.py script with the best parameters
-        command = f".venv\Scripts\python.exe live_trading.py --optimized True"
+        command = f".venv\\Scripts\\python.exe live_trading.py --optimized True"
         bot_process = subprocess.Popen(shlex.split(command))
         query.edit_message_text(text="Live trading started with new parameters")
     else:
         query.edit_message_text(text="Live trading will continue with the previous parameters")
+
 
 async def trades(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /results is issued."""
     try:
         with open('trades.json', 'r') as f:
             trades = json.load(f)
-        await update.message.reply_text(f"Trades results: {trades}")
+            formatted_trades = tabulate(trades, headers="keys", tablefmt="psql", missingval="?")
+        await update.message.reply_text(f"Trades results: {formatted_trades}")
     except (FileNotFoundError, json.JSONDecodeError) as e:
         await update.message.reply_text(f"Error loading trades: {e}")
 

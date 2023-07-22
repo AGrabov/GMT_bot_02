@@ -85,6 +85,7 @@ class HeikinAshiStrategy(bt.Strategy):
         self.prev_close = None  # Store the previous day's closing price
         self.daily_summary_sent = False
         self.tg_notifications = False
+        self.first_run = True
 
         #  Live ploting
         self.datafile = open('data.csv', 'w')
@@ -265,11 +266,7 @@ class HeikinAshiStrategy(bt.Strategy):
         # self.p, self.r1, self.r2, self.s1, self.s2 = self.pivot.lines
 
         self.order = None        
-        self.entry_price = None  
-        
-    def start(self):
-        self.daily_value = self.broker.getvalue()  # Store the initial portfolio value
-        self.start_value = self.broker.getvalue()  # Store the initial portfolio value
+        self.entry_price = None        
     
     def adx_growing(self):
         return (self.adx.real[-1] < self.adx.real[0]) and \
@@ -384,7 +381,11 @@ class HeikinAshiStrategy(bt.Strategy):
         self.daily_trades += 1
         self.total_trades += 1
         
-        self.past_trades.append(trade.pnlcomm)    
+        self.past_trades.append(trade.pnlcomm)
+
+    def start(self):
+        self.daily_value = self.broker.getvalue()  # Store the initial portfolio value
+        self.start_value = self.broker.getvalue()  # Store the initial portfolio value
 
     async def send_daily_summary(self):
         # Calculate daily PnL
@@ -449,6 +450,7 @@ class HeikinAshiStrategy(bt.Strategy):
         if status != 'LIVE':
             print("Waiting for LIVE data...")
             return
+        
 
         close0 = self.data0.close[0] 
         cash, value = self.broker.get_wallet_balance('USDT') 
@@ -467,6 +469,20 @@ class HeikinAshiStrategy(bt.Strategy):
         self.log(f'O: {self.data0.open[0]:.4f}, H: {self.data0.high[0]:.4f}, L: {self.data0.low[0]:.4f}, C: {self.data0.close[0]:.4f}, Volume: {self.data0.volume[0]:.0f}    {status}')
         self.log(f'  \t Portfolio value:  {value:.2f} $,  Position:  {self.pos}')
         self.log('**************************'*2)
+
+        if self.first_run:
+            asyncio.run(self.notifier.send_message(f"Received LIVE data...\n"
+                                                   f"---------------------------------------\n"
+                                                   f"{bt.num2date(self.data0.datetime[0], tz=kiev_tz)}\n"
+                                                   f"Open: \t{self.data0.open[0]:.4f}\n"
+                                                   f"High: \t{self.data0.high[0]:.4f}\n"
+                                                   f"Low: \t{self.data0.low[0]:.4f}\n"
+                                                   f"Close: \t{self.data0.close[0]:.4f}\n"
+                                                   f"Volume: {self.data0.volume[0]:.0f}\n"
+                                                   f"  {status}\n"
+                                                   f"---------------------------------------\n"
+                                                   f" Portfolio value: {value:.2f} $")) 
+            self.first_run = False
         
         # if self.data.haslivedata:
         #     for data in self.datas:
@@ -477,7 +493,8 @@ class HeikinAshiStrategy(bt.Strategy):
 
         # if self.r1[0] != self.r1[-1]:          
         #     print(f"{bt.num2date(self.data1.datetime[0])}, Close: {self.ha.lines.ha_close[0]:.4f} ====,       R2: {self.r2[0]:.4f},   R1: {self.r1[0]:.4f},    P: {self.pp[0]:.4f},    S1: {self.s1[0]:.4f},    S2: {self.s2[0]:.4f}")
-       
+        
+        
         price = self.data0[0]
         if price == 0:           
             return         
@@ -567,7 +584,7 @@ class HeikinAshiStrategy(bt.Strategy):
                                                        f"  CASH: {cash:.2f} $"))
             
         
-        current_price = self.data0.close[0]
+        current_price = self.data1.close[0]
         if self.params.sl_percent != 0:
             sl_value = self.params.sl_percent / 100
             if ((self.in_position > 0) and  ((self.long_entry_price * (1 - sl_value)) > current_price)) or \
@@ -602,3 +619,6 @@ class HeikinAshiStrategy(bt.Strategy):
 
     def stop(self):
         self.datafile.close()
+
+    
+    

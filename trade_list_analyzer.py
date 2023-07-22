@@ -3,6 +3,7 @@
 # Trade list similar to Amibroker output
 
 import backtrader as bt
+import json
 
 class trade_list(bt.Analyzer):
 
@@ -64,3 +65,7 @@ class trade_list(bt.Analyzer):
                  'size': size, 'value': value, 'cumpnl': self.cumprofit,
                  'nbars': barlen, 'pnl/bar': round(pbar, 2),
                  'mfe%': round(mfe, 2), 'mae%': round(mae, 2)})
+
+            # Write the trade details to a JSON file
+            with open('trades.json', 'w') as f:
+                json.dump(self.trades, f)

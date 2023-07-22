@@ -132,14 +132,14 @@ def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         query.edit_message_text(text="Live trading will continue with the previous parameters")
 
-async def results(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def trades(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /results is issued."""
     try:
-        with open('results.json', 'r') as f:
-            results = json.load(f)
-        await update.message.reply_text(f"Current results: {results}")
+        with open('trades.json', 'r') as f:
+            trades = json.load(f)
+        await update.message.reply_text(f"Trades results: {trades}")
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        await update.message.reply_text(f"Error loading results: {e}")
+        await update.message.reply_text(f"Error loading trades: {e}")
 
 
 def main() -> None:
@@ -151,7 +151,7 @@ def main() -> None:
     application.add_handler(CommandHandler("stop_live", stop_live))
     application.add_handler(CommandHandler("status", status))
     application.add_handler(CommandHandler("run_optimizer", run_optimizer))
-    application.add_handler(CommandHandler("results", results))
+    application.add_handler(CommandHandler("trades", trades))
     application.add_handler(CallbackQueryHandler(button))
 
     # Run the bot until the user presses Ctrl-C

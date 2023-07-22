@@ -31,7 +31,7 @@ class HeikinAshiStrategy(bt.Strategy):
         'mfi_period': 10,
         'mfi_level': 21,
         'mfi_smooth': 15,
-        'sl_percent': 5,  
+        'sl_percent': 9,  
         'kama_period': 42, 
         'dma_period': 34, 
         'dma_gainlimit': 35,
@@ -638,5 +638,9 @@ class HeikinAshiStrategy(bt.Strategy):
         self.values.append(self.broker.getvalue())
 
     def stop(self):
-        self.datafile.close()   
-    
+        kiev_tz = pytz.timezone('Europe/Kiev')
+        asyncio.run(self.notifier.send_message(f"Strategy stopped at {bt.num2date(self.data0.datetime[0], tz=kiev_tz)}"))
+        # Closing the notifier connections
+        asyncio.run(self.notifier.close())
+        self.datafile.close()
+

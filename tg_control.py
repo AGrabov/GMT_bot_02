@@ -54,6 +54,7 @@ async def start_live(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         bot_thread = threading.Thread(target=start_bot)
         bot_thread.start()
         await update.message.reply_text('Activating...')
+        print('"start_live" command received')
     else:
         await update.message.reply_text('Bot is already running')
 
@@ -99,6 +100,7 @@ async def run_optimizer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     else:
         days = 30  # default value
     await update.message.reply_text('Optimizer started')
+    print('Optimizer started')
     # Start a new thread to run the optimizer
     threading.Thread(target=run_optimizer_in_background, args=(update, context, days)).start()
 
@@ -120,23 +122,44 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
     start_date = end_date - datetime.timedelta(days=days)
 
     # Run your main.py script with use_optimization flag and dates
-    command = f".venv\Scripts\python.exe main.py --use_optimization True --start_date {start_date} --end_date {end_date}"
-    print(os.getcwd())
+    # command = f"{os.getcwd()}\\.venv\\Scripts\\python.exe main.py --use_optimization True --start_date {start_date} --end_date {end_date}"
+    # print(os.getcwd())
+    # print(command)
+    # process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    command = [
+    "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe", 
+    "main.py", 
+    "--use_optimization", 
+    "True", 
+    "--start_date", 
+    "2023-07-11", 
+    "--end_date", 
+    "2023-07-26"
+    ]
     print(command)
-    process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     stdout, stderr = process.communicate()
+    print("STDOUT:", stdout.decode())
+    print("STDERR:", stderr.decode())
+
 
     # Extract the best parameters from the output
     # This depends on how your script outputs the best parameters, adjust the regex accordingly
     match = re.search(r"Best parameters: (.*)", stdout.decode())
     if match:
         best_params = match.group(1)  # Now this will update the global variable
+        print('Optimizer finished, best parameters found')
+        print(f"Best parameters:\n"
+              f"{best_params}")    
+
         await update.message.reply_text('Optimizer finished, best parameters found')
         keyboard = [[InlineKeyboardButton("Yes", callback_data='yes'),
                      InlineKeyboardButton("No", callback_data='no')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text('Do you want to use these parameters for live trading?', reply_markup=reply_markup)
     else:
+        print('Optimizer finished, but no best parameters found')
         await update.message.reply_text('Optimizer finished, but no best parameters found')
 
 def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

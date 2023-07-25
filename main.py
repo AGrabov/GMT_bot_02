@@ -39,7 +39,7 @@ base_currency = 'USDT' # 'BUSD' #
 symbol = target_coin + base_currency
 dataname = (f'{target_coin}/{base_currency}')
 start_date = dt.datetime.strptime("2023-06-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-end_date = dt.datetime.strptime("2023-07-17 00:00:00", "%Y-%m-%d %H:%M:%S")
+end_date = dt.datetime.strptime("2023-07-25 00:00:00", "%Y-%m-%d %H:%M:%S")
 timeframe =  'Minutes' # 'Hours' #  
 compression = 5
 use_optimization = False
@@ -49,14 +49,16 @@ use_optimization = False
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Run backtest and get the "best_params".')
 parser.add_argument('--use_optimization', type=bool, default=False, help='Whether to use optimization')
-parser.add_argument('--start_date', type=lambda s: datetime.strptime(s, '%Y-%m-%d'), default=None, help='The start date for backtesting (format: YYYY-MM-DD)')
-parser.add_argument('--end_date', type=lambda s: datetime.strptime(s, '%Y-%m-%d'), default=None, help='The end date for backtesting (format: YYYY-MM-DD)')
+parser.add_argument("--start_date", help="Start date in YYYY-MM-DD HH:MM:SS format")
+parser.add_argument("--end_date", help="End date in YYYY-MM-DD HH:MM:SS format")
+
 args = parser.parse_args()
+
 
 # Use the arguments in your script
 use_optimization = args.use_optimization
-start_date = args.start_date
-end_date = args.end_date
+start_date = dt.datetime.strptime(args.start_date, "%Y-%m-%d %H:%M:%S")
+end_date = dt.datetime.strptime(args.end_date, "%Y-%m-%d %H:%M:%S")
 
 notifier = TG_Notifier(token=api_config.TG_BOT_API, chat_id=api_config.TG_BOT_ID)
 
@@ -177,11 +179,11 @@ if __name__ == '__main__':
 
     # Add the datafeed    
     cerebro.adddata(data_feed)
-    # data_feed.plotinfo.plot = False
+    data_feed.plotinfo.plot = False
     
     # # Add resampling    
     data1 = cerebro.replaydata(data_feed, timeframe=bt_timeframe, compression=30, name='data1')
-    # data1.plotinfo.plotmaster = True
+    
     
     # Set the starting cash and commission
     starting_cash = 100
@@ -307,8 +309,8 @@ if __name__ == '__main__':
     print()   
 
     # After running the backtest and getting the best parameters
-    with open('best_params.json', 'w') as f:
-        json.dump(best_params, f)
+    # with open('best_params.json', 'w') as f:
+    #     json.dump(best_params, f)
 
 
     # Print out the statistics
@@ -336,33 +338,33 @@ if __name__ == '__main__':
     print("$" * 77)
 
     # Send a TELEGRAM notification
-    asyncio.run(notifier.send_message(f"Optimization finished at {datetime.now()}\n"
-                                      f"Start date: {start_date}\n"
-                                      f"End date: {end_date}\n"
-                                      f"Best parameters: {best_params}\n"
-                                      f"------------------------------\n"
-                                      f"Backtesting results:\n"
-                                      f"Final value of the portfolio: {final_value:.2f} $\n"
-                                      f"Net profit: {net_profit:.2f}\n"
-                                      f"SQN: {sqn:.2f}\n"
-                                      f"Max drawdown: {max_drawdown:.2f}\n"
-                                      f"------------------------------\n"
-                                      f"Total:\n"
-                                      f"Won/Lost trades: {won_count} / {lost_count} ({total_trades})\n"
-                                      f"PnL(total): {total_pnl:.2f}, PnL(avg): {average_pnl:.2f}\n"
-                                      f"Profitable trades %: {won_trades_perc:.2f}\n"
-                                      f"------------------------------\n"
-                                      f"LONG:\n"
-                                      f"Won/Lost: {long_won_trades} / {long_lost_trades} ({long_total_trades})\n"
-                                      f"PnL(total): {long_total_pnl:.2f}, PnL(avg): {long_avg_pnl:.2f}\n"
-                                      f"------------------------------\n"
-                                      f"SHORT:\n"
-                                      f"Won/Lost: {short_won_trades} / {short_lost_trades} ({short_total_trades})\n"
-                                      f"PnL(total): {short_total_pnl:.2f}, PnL(avg): {short_avg_pnl:.2f}\n"
-                                      ))
+    # asyncio.run(notifier.send_message(f"Optimization finished at {datetime.now()}\n"
+    #                                   f"Start date: {start_date}\n"
+    #                                   f"End date: {end_date}\n"
+    #                                   f"Best parameters: {best_params}\n"
+    #                                   f"------------------------------\n"
+    #                                   f"Backtesting results:\n"
+    #                                   f"Final value of the portfolio: {final_value:.2f} $\n"
+    #                                   f"Net profit: {net_profit:.2f}\n"
+    #                                   f"SQN: {sqn:.2f}\n"
+    #                                   f"Max drawdown: {max_drawdown:.2f}\n"
+    #                                   f"------------------------------\n"
+    #                                   f"Total:\n"
+    #                                   f"Won/Lost trades: {won_count} / {lost_count} ({total_trades})\n"
+    #                                   f"PnL(total): {total_pnl:.2f}, PnL(avg): {average_pnl:.2f}\n"
+    #                                   f"Profitable trades %: {won_trades_perc:.2f}\n"
+    #                                   f"------------------------------\n"
+    #                                   f"LONG:\n"
+    #                                   f"Won/Lost: {long_won_trades} / {long_lost_trades} ({long_total_trades})\n"
+    #                                   f"PnL(total): {long_total_pnl:.2f}, PnL(avg): {long_avg_pnl:.2f}\n"
+    #                                   f"------------------------------\n"
+    #                                   f"SHORT:\n"
+    #                                   f"Won/Lost: {short_won_trades} / {short_lost_trades} ({short_total_trades})\n"
+    #                                   f"PnL(total): {short_total_pnl:.2f}, PnL(avg): {short_avg_pnl:.2f}\n"
+    #                                   ))
 
-    # Closing the notifier connections
-    asyncio.run(notifier.close())
+    # # Closing the notifier connections
+    # asyncio.run(notifier.close())
 
     # Save the results in a json file
 

@@ -122,19 +122,16 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
     start_date = end_date - datetime.timedelta(days=days)
 
     # Run your main.py script with use_optimization flag and dates
-    # command = f"{os.getcwd()}\\.venv\\Scripts\\python.exe main.py --use_optimization True --start_date {start_date} --end_date {end_date}"
-    # print(os.getcwd())
-    # print(command)
-    # process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
     command = [
     "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe", 
     "main.py", 
     "--use_optimization", 
     "True", 
     "--start_date", 
-    "2023-07-11", 
+    start_date, 
     "--end_date", 
-    "2023-07-26"
+    end_date
     ]
     print(command)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -170,8 +167,14 @@ def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if bot_process is not None:
             bot_process.terminate()
         # Run your live_trading.py script with the best parameters
-        command = f".venv\\Scripts\\python.exe live_trading.py --optimized True"
-        bot_process = subprocess.Popen(shlex.split(command))
+        command = [
+        "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe", 
+        "live_trading.py", 
+        "--optimized", 
+        "True"
+        ]
+        # command = f".venv\\Scripts\\python.exe live_trading.py --optimized True"
+        bot_process = subprocess.Popen(command)
         query.edit_message_text(text="Live trading started with new parameters")
     else:
         query.edit_message_text(text="Live trading will continue with the previous parameters")

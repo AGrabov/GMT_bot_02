@@ -120,6 +120,7 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
 
     # Run your main.py script with use_optimization flag and dates
     command = f".venv\Scripts\python.exe main.py --use_optimization --start_date {start_date} --end_date {end_date}"
+    print(command)
     process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 

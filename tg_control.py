@@ -13,6 +13,7 @@ import logging
 import datetime
 import shlex
 import re
+import os
 from telegram import __version__ as TG_VER
 
 try:
@@ -119,7 +120,8 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
     start_date = end_date - datetime.timedelta(days=days)
 
     # Run your main.py script with use_optimization flag and dates
-    command = f".venv\Scripts\python.exe main.py --use_optimization --start_date {start_date} --end_date {end_date}"
+    command = f".venv\Scripts\python.exe main.py --use_optimization True --start_date {start_date} --end_date {end_date}"
+    print(os.getcwd())
     print(command)
     process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()

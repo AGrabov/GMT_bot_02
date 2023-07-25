@@ -200,7 +200,7 @@ print(f"Time difference between local machine and Binance server: {time_differen
 asyncio.run(notifier.send_message(
     f"BOT STARTED!\n"
     f"\n"
-    f"Time difference between local machine and Binance server: {time_difference} ms\n"))
+    f"Time difference between local machine and Binance server: {time_difference} ms"))
 
 
 # create a timezone object for your timezone
@@ -241,24 +241,24 @@ try:
 
     strategySummary = pd.concat(all_stats, axis=1)
 
-except KeyboardInterrupt:
+except (KeyboardInterrupt, SystemExit, StopIteration, InterruptedError):
     print("Interrupted by user")
     asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
-                                      f"\n"
+                                      f"___________________________\n"
                                       f"Interrupted by user"))
     
-except subprocess.TimeoutExpired:
+except (subprocess.CalledProcessError, subprocess.TimeoutExpired, subprocess.SubprocessError):
     print("Strategy execution timed out")
     asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
-                                      f"\n"
-                                      f"Strategy execution timed out"))
+                                      f"___________________________\n"
+                                      f"Strategy execution stopped"))
     
 finally:
     # This code will be executed whether an exception occurs or not
     strategySummary.to_csv('all_stats.csv')
 
     # Print out the trade list
-    print (tabulate(trade_list, headers="keys", tablefmt="psql", missingval="?"))
+    print (tabulate(trade_list, headers="keys", tablefmt="pipe", missingval="?"))
     print()
     print()
 

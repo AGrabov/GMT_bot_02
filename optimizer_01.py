@@ -89,7 +89,7 @@ def run_backtest(fast_ema, slow_ema, hma_length, atr_period, atr_threshold, dmi_
 
     )
         
-    results = cerebro.run(runonce=False)
+    results = cerebro.run(quicknotify=True, tradehistory=True, runonce=False)
     final_value = cerebro.broker.getvalue()
 
     print(final_value, results)
@@ -109,7 +109,7 @@ cmo_threshold_range = range(0, 100)
 volume_factor_perc_range = range(10, 100)
 ta_threshold_range = range(0, 10)
 mfi_period_range = range(2, 25)
-mfi_level_range = range(0, 100)
+mfi_level_range = range(1, 99)
 mfi_smooth_range = range(1, 15)
 sl_percent_range = range(0, 10)
 kama_period_range = range(3, 50)
@@ -134,24 +134,24 @@ def evaluate(params, fetched_data, start_date, end_date, bt_timeframe, compressi
     drawdown = results[0].analyzers.drawdown.get_analysis()['max']['drawdown']  # get maximum drawdown
     sqn = results[0].analyzers.sqn.get_analysis()['sqn']  # get sqn    
     net_profit = results[0].analyzers.returns.get_analysis()['rtot']
-    trade_analysis = results[0].analyzers.trade_analyzer.get_analysis()
+    # trade_analysis = results[0].analyzers.trade_analyzer.get_analysis()
     
-    if 'total' in trade_analysis and 'total' in trade_analysis['total']:
-        total_trades = trade_analysis.total.total
-        if  'won' in trade_analysis and 'total' in trade_analysis['won']:        
-            won_total = trade_analysis.won.total
-        else:        
-            won_total = 0
-    else:
-        total_trades = 0
-        won_total = 0   
+    # if 'total' in trade_analysis and 'total' in trade_analysis['total']:
+    #     total_trades = trade_analysis.total.total
+    #     if  'won' in trade_analysis and 'total' in trade_analysis['won']:        
+    #         won_total = trade_analysis.won.total
+    #     else:        
+    #         won_total = 0
+    # else:
+    #     total_trades = 0
+    #     won_total = 0   
 
-    if 'pnl' in trade_analysis and 'net' in trade_analysis['pnl'] and 'average' in trade_analysis['pnl']['net']:
-        average_pnl = trade_analysis.pnl.net.average
-    else:
-        average_pnl = 0  # or some other default value 
+    # if 'pnl' in trade_analysis and 'net' in trade_analysis['pnl'] and 'average' in trade_analysis['pnl']['net']:
+    #     average_pnl = trade_analysis.pnl.net.average
+    # else:
+    #     average_pnl = 0  # or some other default value 
 
-    print(final_value, drawdown, sqn, average_pnl, won_total, net_profit)
+    print(final_value, drawdown, sqn, net_profit)
     # return final_value, drawdown, sqn, average_pnl, won_total, net_profit  # return profit, drawdown, sqn, won_total, net_profit
     return final_value, drawdown, sqn, net_profit  # return profit, drawdown, sqn, won_total, net_profit
 
@@ -175,7 +175,7 @@ toolbox.register("attr_cmo_threshold", lambda: int(random.randint(0, 100)))
 toolbox.register("attr_volume_factor_perc", lambda: int(random.randint(10, 100)))
 toolbox.register("attr_ta_threshold", lambda: int(random.randint(0, 10)))
 toolbox.register("attr_mfi_period", lambda: int(random.randint(2, 25)))
-toolbox.register("attr_mfi_level", lambda: int(random.randint(0, 100)))
+toolbox.register("attr_mfi_level", lambda: int(random.randint(1, 99)))
 toolbox.register("attr_mfi_smooth", lambda: int(random.randint(1, 15)))
 toolbox.register("attr_sl_percent", lambda: int(random.randint(0, 10)))
 toolbox.register("attr_kama_period", lambda: int(random.randint(3, 50)))
@@ -238,7 +238,7 @@ def main(symbol, start_date, end_date, bt_timeframe, compression, fetched_data):
     # Use a multiprocessing Pool for the map function
     pool = Pool()
     toolbox.register("map", pool.map)
-    pop = toolbox.population(n=60)
+    pop = toolbox.population(n=50)
     hof = tools.HallOfFame(40)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
@@ -246,7 +246,7 @@ def main(symbol, start_date, end_date, bt_timeframe, compression, fetched_data):
     stats.register("max", np.max)
 
     try:
-        pop, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.55, mutpb=0.25, ngen=40, 
+        pop, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.55, mutpb=0.25, ngen=45, 
                                             stats=stats, halloffame=hof, verbose=True)
         
         # Save best individuals and their fitness to a file

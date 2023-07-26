@@ -57,8 +57,9 @@ args = parser.parse_args()
 
 # Use the arguments in your script
 use_optimization = args.use_optimization
-start_date = dt.datetime.strptime(args.start_date, "%Y-%m-%d %H:%M:%S")
-end_date = dt.datetime.strptime(args.end_date, "%Y-%m-%d %H:%M:%S")
+start_date = dt.datetime.strptime(args.start_date + " 00:00:00", "%Y-%m-%d %H:%M:%S")
+end_date = dt.datetime.strptime(args.end_date + " 00:00:00", "%Y-%m-%d %H:%M:%S")
+
 
 notifier = TG_Notifier(token=api_config.TG_BOT_API, chat_id=api_config.TG_BOT_ID)
 
@@ -183,8 +184,7 @@ if __name__ == '__main__':
     
     # # Add resampling    
     data1 = cerebro.replaydata(data_feed, timeframe=bt_timeframe, compression=30, name='data1')
-    
-    
+        
     # Set the starting cash and commission
     starting_cash = 100
     cerebro.broker.setcash(starting_cash)
@@ -233,6 +233,7 @@ if __name__ == '__main__':
 
     )   
 
+    print(cerebro.broker.getvalue())
     # Run the strategy and get the instance
     strat = cerebro.run(quicknotify=True, tradehistory=True, runonce=False)[0]       
     
@@ -272,8 +273,8 @@ if __name__ == '__main__':
     lost_average_pnl = lost_analysis['pnl']['average']
     lost_max_pnl = lost_analysis['pnl']['max']
 
-    won_trades_perc = (won_count / total_trades) * 100
-    lost_trades_perc = (lost_count / total_trades) * 100
+    won_trades_perc = (won_count / total_trades) * 100 if total_trades != 0 else 0
+    lost_trades_perc = (lost_count / total_trades) * 100 if total_trades != 0 else 0
 
     long_analysis = trade_analysis['long']
     long_total_trades = long_analysis['total']

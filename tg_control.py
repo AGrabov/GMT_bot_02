@@ -14,6 +14,7 @@ import datetime
 import shlex
 import re
 import os
+import time
 from telegram import __version__ as TG_VER
 
 try:
@@ -124,14 +125,14 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
     # Run your main.py script with use_optimization flag and dates
     
     command = [
-    "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe", 
+    ".venv\\Scripts\\python.exe",  
     "main.py", 
     "--use_optimization", 
     "True", 
     "--start_date", 
-    start_date, 
+    f"{start_date}", 
     "--end_date", 
-    end_date
+    f"{end_date}"
     ]
     print(command)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -140,17 +141,24 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
     print("STDOUT:", stdout.decode())
     print("STDERR:", stderr.decode())
 
+    # Get the modification time of the file
+    mod_time = os.path.getmtime('best_params.json')
+    mod_time = time.ctime(mod_time)  # Convert to a readable format
 
-    # Extract the best parameters from the output
-    # This depends on how your script outputs the best parameters, adjust the regex accordingly
-    match = re.search(r"Best parameters: (.*)", stdout.decode())
-    if match:
-        best_params = match.group(1)  # Now this will update the global variable
+    # Read the best parameters from the file
+    with open('best_params.json', 'r') as f:
+        best_params = json.load(f)
+
+    if best_params:
         print('Optimizer finished, best parameters found')
         print(f"Best parameters:\n"
               f"{best_params}")    
+        print(f"Parameters were last updated at: {mod_time}")
 
-        await update.message.reply_text('Optimizer finished, best parameters found')
+        await update.message.reply_text(f"Optimizer finished, best parameters found\n"
+                                        f"Best parameters:\n"
+                                        f"{best_params}\n"
+                                        f"Parameters were last updated at: {mod_time}")
         keyboard = [[InlineKeyboardButton("Yes", callback_data='yes'),
                      InlineKeyboardButton("No", callback_data='no')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -158,6 +166,40 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
     else:
         print('Optimizer finished, but no best parameters found')
         await update.message.reply_text('Optimizer finished, but no best parameters found')
+
+async def optimized_live(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a message when the command /start_live is issued."""
+    global bot_thread, bot_process
+    if bot_thread is not None:        
+        stop_bot(bot_process)
+        bot_thread.join()  # Wait for the bot to stop
+        bot_thread = None
+        bot_process = None
+        await update.message.reply_text('Bot stopped')
+
+    # Check if 'best_params.json' exists and get its modification time
+    if os.path.exists('best_params.json'):
+        modification_time = os.path.getmtime('best_params.json')
+        modification_time = datetime.datetime.fromtimestamp(modification_time)
+        # Read the best parameters from the file
+        with open('best_params.json', 'r') as f:
+            best_params = json.load(f)        
+        await update.message.reply_text(f"'best_params.json' found\n"
+                                        f"Parameters was last modified on {modification_time}\n"
+                                        f"Best parameters:\n"
+                                        f"{best_params}")
+        print(f"'best_params.json' was last modified on {modification_time}")
+    else:
+        await update.message.reply_text("No 'best_params.json' found")
+        print("No 'best_params.json' found")
+        return
+
+    # Ask for confirmation to restart the bot with new parameters
+    keyboard = [[InlineKeyboardButton("Yes", callback_data='yes'),
+                 InlineKeyboardButton("No", callback_data='no')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Do you want to restart the bot with new parameters?', reply_markup=reply_markup)
+    print('"optimized_live" command received')
 
 def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -168,7 +210,8 @@ def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             bot_process.terminate()
         # Run your live_trading.py script with the best parameters
         command = [
-        "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe", 
+        # "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe",
+        ".venv\\Scripts\\python.exe", 
         "live_trading.py", 
         "--optimized", 
         "True"

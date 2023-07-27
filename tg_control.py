@@ -168,15 +168,6 @@ async def run_optimizer_in_background_async(update: Update, context: ContextType
         await update.message.reply_text('Optimizer finished, but no best parameters found')
 
 async def optimized_live(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message when the command /start_live is issued."""
-    global bot_thread, bot_process
-    if bot_thread is not None:        
-        stop_bot(bot_process)
-        bot_thread.join()  # Wait for the bot to stop
-        bot_thread = None
-        bot_process = None
-        await update.message.reply_text('Bot stopped')
-
     # Check if 'best_params.json' exists and get its modification time
     if os.path.exists('best_params.json'):
         modification_time = os.path.getmtime('best_params.json')
@@ -201,26 +192,30 @@ async def optimized_live(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text('Do you want to restart the bot with new parameters?', reply_markup=reply_markup)
     print('"optimized_live" command received')
 
-def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    query.answer()
+    await query.answer()
     if query.data == 'yes':
-        # Check if bot_process is not None before trying to terminate it
-        if bot_process is not None:
-            bot_process.terminate()
+        # Stop the bot before starting it with new parameters
+        global bot_thread, bot_process
+        if bot_thread is not None:        
+            stop_bot(bot_process)
+            bot_thread.join()  # Wait for the bot to stop
+            bot_thread = None
+            bot_process = None
+            await query.edit_message_text('Bot stopped')
+
         # Run your live_trading.py script with the best parameters
         command = [
-        # "C:\\Users\\artem\\PycharmProjects\\GMT_bot_02\\.venv\\Scripts\\python.exe",
         ".venv\\Scripts\\python.exe", 
         "live_trading.py", 
         "--optimized", 
         "True"
         ]
-        # command = f".venv\\Scripts\\python.exe live_trading.py --optimized True"
         bot_process = subprocess.Popen(command)
-        query.edit_message_text(text="Live trading started with new parameters")
+        await query.edit_message_text(text="Live trading started with new parameters")
     else:
-        query.edit_message_text(text="Live trading will continue with the previous parameters")
+        await query.edit_message_text(text="Live trading will continue with the previous parameters")
 
 async def trades(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /results is issued."""
@@ -242,10 +237,12 @@ def main() -> None:
     application.add_handler(CommandHandler("status", status))
     application.add_handler(CommandHandler("run_optimizer", run_optimizer))
     application.add_handler(CommandHandler("trades", trades))
+    application.add_handler(CommandHandler("optimized_live", optimized_live))  # Add this line
     application.add_handler(CallbackQueryHandler(button))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 if __name__ == '__main__':
     main()

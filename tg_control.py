@@ -213,9 +213,93 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "True"
         ]
         bot_process = subprocess.Popen(command)
+        bot_thread = threading.Thread(target=bot_process.communicate)  # Update bot_thread
+        bot_thread.start()  # Start the thread
         await query.edit_message_text(text="Live trading started with new parameters")
     else:
         await query.edit_message_text(text="Live trading will continue with the previous parameters")
+
+async def get_current_params(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        with open('current_params.json', 'r') as f:
+            current_params = json.load(f)
+            txt = (f"Current parameters:\n"
+                  f"fast_ema: {current_params[0]}\n"
+                  f"slow_ema: {current_params[1]}\n"
+                  f"hma_length: {current_params[2]}\n"
+                  f"atr_period: {current_params[3]}\n"
+                  f"atr_threshold: {current_params[4]}\n"
+                  f"dmi_length: {current_params[5]}\n"        
+                  f"dmi_threshold: {current_params[6]}\n"
+                  f"cmo_period: {current_params[7]}\n"
+                  f"cmo_threshold: {current_params[8]}\n"
+                  f"volume_factor_perc: {current_params[9]}\n"
+                  f"ta_threshold: {current_params[10]}\n"
+                  f"mfi_period: {current_params[11]}\n"
+                  f"mfi_level: {current_params[12]}\n"
+                  f"mfi_smooth: {current_params[13]}\n"
+                  f"sl_percent: {current_params[14]}\n"
+                  f"kama_period: {current_params[15]}\n"
+                  f"dma_period: {current_params[16]}\n"
+                  f"dma_gainlimit: {current_params[17]}\n"
+                  f"dma_hperiod: {current_params[18]}\n"
+                  f"fast_ad: {current_params[19]}\n"
+                  f"slow_ad: {current_params[20]}\n"
+                  f"fastk_period: {current_params[21]}\n"
+                  f"fastd_period: {current_params[22]}\n"
+                  f"fastd_matype: {current_params[23]}\n"
+                  f"mama_fastlimit: {current_params[24]}\n"
+                  f"mama_slowlimit: {current_params[25]}\n"
+                  f"apo_fast: {current_params[26]}\n"
+                  f"apo_slow: {current_params[27]}\n"
+                  f"apo_matype: {current_params[28]}")
+        await update.message.reply_text(f"Current parameters: {txt}")
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        await update.message.reply_text(f"Error loading current parameters: {e}")
+
+async def get_best_params(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        # Check if 'best_params.json' exists and get its modification time
+        if os.path.exists('best_params.json'):
+            modification_time = os.path.getmtime('best_params.json')
+            modification_time = datetime.datetime.fromtimestamp(modification_time)
+            # Read the best parameters from the file
+            with open('best_params.json', 'r') as f:
+                best_params = json.load(f)        
+            await update.message.reply_text(f"'best_params.json' found\n"
+                                            f"Parameters was last modified on {modification_time}\n"
+                                            f"Best parameters:\n"            
+                                            f"fast_ema: {best_params[0]}\n"
+                                            f"slow_ema: {best_params[1]}\n"
+                                            f"hma_length: {best_params[2]}\n"
+                                            f"atr_period: {best_params[3]}\n"
+                                            f"atr_threshold: {best_params[4]}\n"
+                                            f"dmi_length: {best_params[5]}\n"        
+                                            f"dmi_threshold: {best_params[6]}\n"
+                                            f"cmo_period: {best_params[7]}\n"
+                                            f"cmo_threshold: {best_params[8]}\n"
+                                            f"volume_factor_perc: {best_params[9]}\n"
+                                            f"ta_threshold: {best_params[10]}\n"
+                                            f"mfi_period: {best_params[11]}\n"
+                                            f"mfi_level: {best_params[12]}\n"
+                                            f"mfi_smooth: {best_params[13]}\n"
+                                            f"sl_percent: {best_params[14]}\n"
+                                            f"kama_period: {best_params[15]}\n"
+                                            f"dma_period: {best_params[16]}\n"
+                                            f"dma_gainlimit: {best_params[17]}\n"
+                                            f"dma_hperiod: {best_params[18]}\n"
+                                            f"fast_ad: {best_params[19]}\n"
+                                            f"slow_ad: {best_params[20]}\n"
+                                            f"fastk_period: {best_params[21]}\n"
+                                            f"fastd_period: {best_params[22]}\n"
+                                            f"fastd_matype: {best_params[23]}\n"
+                                            f"mama_fastlimit: {best_params[24]}\n"
+                                            f"mama_slowlimit: {best_params[25]}\n"
+                                            f"apo_fast: {best_params[26]}\n"
+                                            f"apo_slow: {best_params[27]}\n"
+                                            f"apo_matype: {best_params[28]}")            
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        await update.message.reply_text(f"Error loading best parameters: {e}")
 
 async def trades(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /results is issued."""

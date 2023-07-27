@@ -147,9 +147,7 @@ cerebro.addstrategy(HeikinAshiStrategy,
         mama_slowlimit=best_params[25],
         apo_fast=best_params[26],
         apo_slow=best_params[27],
-        apo_matype=best_params[28],
-        
-        
+        apo_matype=best_params[28],    
 
     )   
 
@@ -198,9 +196,9 @@ local_time = time.time() * 1000  # convert to milliseconds
 time_difference = round(server_time - local_time)
 print(f"Time difference between local machine and Binance server: {time_difference} ms")
 asyncio.run(notifier.send_message(
-    f"BOT STARTED!\n"
+    f"STARTING LIVE TRADING!\n"
     f"\n"
-    f"Time difference between local machine and Binance server: {time_difference} ms"))
+    f"Time difference with Binance server: {time_difference} ms"))
 
 
 # create a timezone object for your timezone
@@ -243,13 +241,13 @@ try:
 
 except (KeyboardInterrupt, SystemExit, StopIteration, InterruptedError):
     print("Interrupted by user")
-    asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
+    asyncio.run(notifier.send_message(f"LIVE TRADING STOPTED!\n"
                                       f"___________________________\n"
                                       f"Interrupted by user"))
     
 except (subprocess.CalledProcessError, subprocess.TimeoutExpired, subprocess.SubprocessError):
     print("Strategy execution timed out")
-    asyncio.run(notifier.send_message(f"BOT STOPTED!\n"
+    asyncio.run(notifier.send_message(f"LIVE TRADING STOPTED!\n"
                                       f"___________________________\n"
                                       f"Strategy execution stopped"))
     
